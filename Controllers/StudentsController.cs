@@ -104,6 +104,55 @@ public class StudentsController(IConfiguration config) : ControllerBase
 
         // Write code to calculate and update grades
 
+        using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+
+        // 1. hent alle studenter fra databasen
+        using var selectCmd = new SqlCommand(
+            "SELECT Id, Name, Course, Marks, Grade FROM Students", conn);
+        
+        using var reader = await selectCmd.ExecuteReaderAsync();
+
+        // leser studentene en og en 
+
+        while (await reader.ReadAsync())
+        {
+            // Lager student-objekt fra databasen
+            var student = new Student
+            {
+                Id = reader.GetInt32(0),
+                Name = reader.GetString(1),
+                Course = reader.GetString(2),
+                Marks = reader.GetInt32(3),
+                Grade = reader.IsDBNull(4) ? null : reader.GetString(4)
+            };
+
+            // 2. Regn ut karakterer
+
+            student.Grade = GetGrade(student.Marks);
+
+            // legg studenten i listen
+            studentsWithGrade.Add(student);
+        }
+
+        reader.Close();
+
+        // 3. oppdater Grade for hver student i databasen
+
+    foreach (var student in studentsWithGrade)
+        {
+            using var updateCmd = new SqlCommand(
+                "UPDATE Students SET Grade = @grade WHERE ID = @ID", conn);
+
+            // setter verdier 
+            updateCmd.Parameters.AddWithValue("@Grade", student.Grade);
+            updateCmd.Parameters.AddWithValue("@ID", student.Id);
+
+            await updateCmd.ExecuteNonQueryAsync();
+        }
+
+        // 4. Retun alle studntene med oppdatert Grade
+
         return studentsWithGrade;
     }
 
