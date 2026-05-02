@@ -157,11 +157,45 @@ public class StudentsController(IConfiguration config) : ControllerBase
     }
 
     [HttpGet("report")]
-    public async Task<IActionResult> Report()
+public async Task<IActionResult> Report()
+{
+    using var conn = new SqlConnection(_connectionString);
+    await conn.OpenAsync();
+
+    var result = new List<object>();
+
+    var cmd = new SqlCommand(@"
+        SELECT 
+            Course,
+            COUNT(*) AS TotalStudents,
+            AVG(Marks) AS AverageMarks,
+            SUM(CASE WHEN Grade = 'A' THEN 1 ELSE 0 END) AS A_Count,
+            SUM(CASE WHEN Grade = 'B' THEN 1 ELSE 0 END) AS B_Count,
+            SUM(CASE WHEN Grade = 'C' THEN 1 ELSE 0 END) AS C_Count,
+            SUM(CASE WHEN Grade = 'D' THEN 1 ELSE 0 END) AS D_Count
+        FROM Students
+        GROUP BY Course
+    ", conn);
+
+    using var reader = await cmd.ExecuteReaderAsync();
+
+    while (await reader.ReadAsync())
     {
-        // Write code for the report generation logic.
-        return Ok();
+        result.Add(new
+        {
+            Course = reader.GetString(0),
+            TotalStudents = reader.GetInt32(1),
+            AverageMarks = reader.GetDouble(2),
+            A = reader.GetInt32(3),
+            B = reader.GetInt32(4),
+            C = reader.GetInt32(5),
+            D = reader.GetInt32(6)
+        });
     }
+
+    return Ok(result);
+}
+    
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
