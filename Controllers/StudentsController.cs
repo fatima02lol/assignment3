@@ -185,7 +185,7 @@ public async Task<IActionResult> Report()
         {
             Course = reader.GetString(0),
             TotalStudents = reader.GetInt32(1),
-            AverageMarks = reader.GetDouble(2),
+            AverageMarks = Convert.ToDouble(reader.GetValue(2)),
             A = reader.GetInt32(3),
             B = reader.GetInt32(4),
             C = reader.GetInt32(5),
